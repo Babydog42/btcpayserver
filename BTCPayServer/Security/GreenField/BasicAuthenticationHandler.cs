@@ -39,7 +39,7 @@ namespace BTCPayServer.Security.Greenfield
         {
             string authHeader = Context.Request.Headers["Authorization"];
 
-            if (authHeader == null || !authHeader.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+            if (!IsValidAuthHeader(authHeader))
                 return AuthenticateResult.NoResult();
             string password;
             string username;
@@ -86,6 +86,36 @@ namespace BTCPayServer.Security.Greenfield
             return AuthenticateResult.Success(new AuthenticationTicket(
                 new ClaimsPrincipal(new ClaimsIdentity(claims, GreenfieldConstants.AuthenticationType)),
                 GreenfieldConstants.AuthenticationType));
+        }
+
+        private bool IsValidAuthHeader(string authHeader)
+        {
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var parts = authHeader.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 2)
+            {
+                return false;
+            }
+
+            try
+            {
+                var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(parts[1]));
+                var usernamePassword = decoded.Split(':');
+                if (usernamePassword.Length != 2)
+                {
+                    return false;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }
